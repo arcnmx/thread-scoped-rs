@@ -19,11 +19,7 @@ script:
     - cargo test -v $FEATURES
 
 matrix:
-    fast_finish: true
     include:
-        - rust: nightly
-          env: FEATURES="--features unstable"
-    allow_failures:
         - rust: nightly
           env: FEATURES="--features unstable"
 
