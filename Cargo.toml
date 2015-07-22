@@ -1,6 +1,6 @@
 [package]
 name = "thread-scoped"
-version = "0.0.1"
+version = "1.0.0"
 authors = ["arcnmx", "The Rust Project Developers"]
 
 description = "Stable std::thread::scoped"

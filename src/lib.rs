@@ -76,24 +76,22 @@ impl<'a, T: Send + 'a> Drop for JoinGuard<'a, T> {
 }
 
 /// Spawns a new scoped thread
-pub fn scoped<'a, T, F>(f: F) -> JoinGuard<'a, T> where
+pub unsafe fn scoped<'a, T, F>(f: F) -> JoinGuard<'a, T> where
     T: Send + 'static, F: FnOnce() -> T, F: Send + 'a
 {
     struct Sendable<T>(T);
 
     unsafe impl<T> Send for Sendable<T> { }
 
-    unsafe {
-        let mut b = Box::new(f);
-        let b_ptr = Sendable(&mut *b as *mut F as *mut ());
-        forget(b);
+    let mut b = Box::new(f);
+    let b_ptr = Sendable(&mut *b as *mut F as *mut ());
+    forget(b);
 
-        JoinGuard {
-            inner: Some(spawn(move || {
-                transmute::<_, Box<F>>(b_ptr.0 as *mut F)()
-            })),
-            _marker: PhantomData,
-        }
+    JoinGuard {
+        inner: Some(spawn(move || {
+            transmute::<_, Box<F>>(b_ptr.0 as *mut F)()
+        })),
+        _marker: PhantomData,
     }
 }
 
@@ -105,38 +103,48 @@ mod tests {
 
     #[test]
     fn test_scoped_stack() {
-        let mut a = 5;
-        scoped(|| {
-            sleep_ms(50);
-            a = 2;
-        }).join();
-        assert_eq!(a, 2);
+        unsafe {
+            let mut a = 5;
+            scoped(|| {
+                sleep_ms(50);
+                a = 2;
+            }).join();
+            assert_eq!(a, 2);
+        }
     }
 
     #[test]
     fn test_join_success() {
-        assert!(scoped(move|| -> String {
-            "Success!".to_string()
-        }).join() == "Success!");
+        unsafe {
+            assert!(scoped(move|| -> String {
+                "Success!".to_string()
+            }).join() == "Success!");
+        }
     }
 
     #[test]
     fn test_scoped_success() {
-        let res = scoped(move|| -> String {
-            "Success!".to_string()
-        }).join();
-        assert!(res == "Success!");
+        unsafe {
+            let res = scoped(move|| -> String {
+                "Success!".to_string()
+            }).join();
+            assert!(res == "Success!");
+        }
     }
 
     #[test]
     #[should_panic]
     fn test_scoped_panic() {
-        scoped(|| panic!()).join();
+        unsafe {
+            scoped(|| panic!()).join();
+        }
     }
 
     #[test]
     #[should_panic]
     fn test_scoped_implicit_panic() {
-        let _ = scoped(|| panic!());
+        unsafe {
+            let _ = scoped(|| panic!());
+        }
     }
 }
