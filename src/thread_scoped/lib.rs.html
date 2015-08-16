@@ -190,6 +190,13 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
 </pre><pre class='rust '>
 <span class='attribute'>#<span class='op'>!</span>[<span class='ident'>deny</span>(<span class='ident'>missing_docs</span>)]</span>
 <span class='attribute'>#<span class='op'>!</span>[<span class='ident'>cfg_attr</span>(<span class='ident'>feature</span> <span class='op'>=</span> <span class='string'>&quot;unstable&quot;</span>, <span class='ident'>feature</span>(<span class='ident'>scoped</span>))]</span>
@@ -212,7 +219,7 @@
 <span class='doccomment'>/// `JoinGuard` will panic on join or drop if its owned thread panics</span>
 <span class='attribute'>#[<span class='ident'>must_use</span> <span class='op'>=</span> <span class='string'>&quot;thread will be immediately joined if `JoinGuard` is not used&quot;</span>]</span>
 <span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>JoinGuard</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='ident'>T</span>: <span class='ident'>Send</span> <span class='op'>+</span> <span class='lifetime'>&#39;a</span><span class='op'>&gt;</span> {
-    <span class='ident'>inner</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>JoinHandle</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;&gt;</span>,
+    <span class='ident'>inner</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>JoinHandle</span><span class='op'>&lt;</span><span class='ident'>BoxedThing</span><span class='op'>&gt;&gt;</span>,
     <span class='ident'>_marker</span>: <span class='ident'>PhantomData</span><span class='op'>&lt;</span><span class='kw-2'>&amp;</span><span class='lifetime'>&#39;a</span> <span class='ident'>T</span><span class='op'>&gt;</span>,
 }
 
@@ -231,7 +238,7 @@
     <span class='doccomment'>/// `join()` will panic if the owned thread panics</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>join</span>(<span class='kw-2'>mut</span> <span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>T</span> {
         <span class='kw'>match</span> <span class='self'>self</span>.<span class='ident'>inner</span>.<span class='ident'>take</span>().<span class='ident'>unwrap</span>().<span class='ident'>join</span>() {
-            <span class='prelude-val'>Ok</span>(<span class='ident'>res</span>) <span class='op'>=&gt;</span> <span class='ident'>res</span>,
+            <span class='prelude-val'>Ok</span>(<span class='ident'>res</span>) <span class='op'>=&gt;</span> <span class='kw'>unsafe</span> { <span class='op'>*</span><span class='ident'>res</span>.<span class='ident'>into_inner</span>() },
             <span class='prelude-val'>Err</span>(_) <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;child thread {:?} panicked&quot;</span>, <span class='self'>self</span>.<span class='ident'>thread</span>()),
         }
     }
@@ -270,24 +277,31 @@
 
 <span class='doccomment'>/// Spawns a new scoped thread</span>
 <span class='kw'>pub</span> <span class='kw'>unsafe</span> <span class='kw'>fn</span> <span class='ident'>scoped</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='ident'>T</span>, <span class='ident'>F</span><span class='op'>&gt;</span>(<span class='ident'>f</span>: <span class='ident'>F</span>) <span class='op'>-&gt;</span> <span class='ident'>JoinGuard</span><span class='op'>&lt;</span><span class='lifetime'>&#39;a</span>, <span class='ident'>T</span><span class='op'>&gt;</span> <span class='kw'>where</span>
-    <span class='ident'>T</span>: <span class='ident'>Send</span> <span class='op'>+</span> <span class='lifetime'>&#39;static</span>, <span class='ident'>F</span>: <span class='ident'>FnOnce</span>() <span class='op'>-&gt;</span> <span class='ident'>T</span>, <span class='ident'>F</span>: <span class='ident'>Send</span> <span class='op'>+</span> <span class='lifetime'>&#39;a</span>
+    <span class='ident'>T</span>: <span class='ident'>Send</span> <span class='op'>+</span> <span class='lifetime'>&#39;a</span>, <span class='ident'>F</span>: <span class='ident'>FnOnce</span>() <span class='op'>-&gt;</span> <span class='ident'>T</span>, <span class='ident'>F</span>: <span class='ident'>Send</span> <span class='op'>+</span> <span class='lifetime'>&#39;a</span>
 {
-    <span class='kw'>struct</span> <span class='ident'>Sendable</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;</span>(<span class='ident'>T</span>);
-
-    <span class='kw'>unsafe</span> <span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;</span> <span class='ident'>Send</span> <span class='kw'>for</span> <span class='ident'>Sendable</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;</span> { }
-
-    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>f</span>);
-    <span class='kw'>let</span> <span class='ident'>b_ptr</span> <span class='op'>=</span> <span class='ident'>Sendable</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='op'>*</span><span class='ident'>b</span> <span class='kw'>as</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>F</span> <span class='kw'>as</span> <span class='op'>*</span><span class='kw-2'>mut</span> ());
-    <span class='ident'>forget</span>(<span class='ident'>b</span>);
+    <span class='kw'>let</span> <span class='ident'>f</span> <span class='op'>=</span> <span class='ident'>BoxedThing</span>::<span class='ident'>new</span>(<span class='ident'>f</span>);
 
     <span class='ident'>JoinGuard</span> {
-        <span class='ident'>inner</span>: <span class='prelude-val'>Some</span>(<span class='ident'>spawn</span>(<span class='kw'>move</span> <span class='op'>||</span> {
-            <span class='ident'>transmute</span>::<span class='op'>&lt;</span>_, <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>F</span><span class='op'>&gt;&gt;</span>(<span class='ident'>b_ptr</span>.<span class='number'>0</span> <span class='kw'>as</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>F</span>)()
-        })),
+        <span class='ident'>inner</span>: <span class='prelude-val'>Some</span>(<span class='ident'>spawn</span>(<span class='kw'>move</span> <span class='op'>||</span>
+            <span class='ident'>BoxedThing</span>::<span class='ident'>new</span>(<span class='ident'>f</span>.<span class='ident'>into_inner</span>::<span class='op'>&lt;</span><span class='ident'>F</span><span class='op'>&gt;</span>()())
+        )),
         <span class='ident'>_marker</span>: <span class='ident'>PhantomData</span>,
     }
 }
 
+<span class='kw'>struct</span> <span class='ident'>BoxedThing</span>(<span class='ident'>usize</span>);
+<span class='kw'>impl</span> <span class='ident'>BoxedThing</span> {
+    <span class='kw'>fn</span> <span class='ident'>new</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;</span>(<span class='ident'>v</span>: <span class='ident'>T</span>) <span class='op'>-&gt;</span> <span class='kw'>Self</span> {
+        <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>b</span> <span class='op'>=</span> <span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>v</span>);
+        <span class='kw'>let</span> <span class='ident'>b_ptr</span> <span class='op'>=</span> <span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='op'>*</span><span class='ident'>b</span> <span class='kw'>as</span> <span class='op'>*</span><span class='kw-2'>mut</span> _ <span class='kw'>as</span> <span class='ident'>usize</span>;
+        <span class='ident'>forget</span>(<span class='ident'>b</span>);
+        <span class='ident'>BoxedThing</span>(<span class='ident'>b_ptr</span>)
+    }
+
+    <span class='kw'>unsafe</span> <span class='kw'>fn</span> <span class='ident'>into_inner</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;</span> {
+        <span class='ident'>transmute</span>(<span class='self'>self</span>.<span class='number'>0</span> <span class='kw'>as</span> <span class='op'>*</span><span class='kw-2'>mut</span> <span class='ident'>T</span>)
+    }
+}
 
 <span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>test</span>)]</span>
 <span class='kw'>mod</span> <span class='ident'>tests</span> {
