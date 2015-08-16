@@ -19,7 +19,7 @@ use std::mem::{transmute, forget};
 /// `JoinGuard` will panic on join or drop if its owned thread panics
 #[must_use = "thread will be immediately joined if `JoinGuard` is not used"]
 pub struct JoinGuard<'a, T: Send + 'a> {
-    inner: Option<JoinHandle<T>>,
+    inner: Option<JoinHandle<BoxedThing>>,
     _marker: PhantomData<&'a T>,
 }
 
@@ -38,7 +38,7 @@ impl<'a, T: Send + 'a> JoinGuard<'a, T> {
     /// `join()` will panic if the owned thread panics
     pub fn join(mut self) -> T {
         match self.inner.take().unwrap().join() {
-            Ok(res) => res,
+            Ok(res) => unsafe { *res.into_inner() },
             Err(_) => panic!("child thread {:?} panicked", self.thread()),
         }
     }
@@ -77,24 +77,31 @@ impl<'a, T: Send + 'a> Drop for JoinGuard<'a, T> {
 
 /// Spawns a new scoped thread
 pub unsafe fn scoped<'a, T, F>(f: F) -> JoinGuard<'a, T> where
-    T: Send + 'static, F: FnOnce() -> T, F: Send + 'a
+    T: Send + 'a, F: FnOnce() -> T, F: Send + 'a
 {
-    struct Sendable<T>(T);
-
-    unsafe impl<T> Send for Sendable<T> { }
-
-    let mut b = Box::new(f);
-    let b_ptr = Sendable(&mut *b as *mut F as *mut ());
-    forget(b);
+    let f = BoxedThing::new(f);
 
     JoinGuard {
-        inner: Some(spawn(move || {
-            transmute::<_, Box<F>>(b_ptr.0 as *mut F)()
-        })),
+        inner: Some(spawn(move ||
+            BoxedThing::new(f.into_inner::<F>()())
+        )),
         _marker: PhantomData,
     }
 }
 
+struct BoxedThing(usize);
+impl BoxedThing {
+    fn new<T>(v: T) -> Self {
+        let mut b = Box::new(v);
+        let b_ptr = &mut *b as *mut _ as usize;
+        forget(b);
+        BoxedThing(b_ptr)
+    }
+
+    unsafe fn into_inner<T>(self) -> Box<T> {
+        transmute(self.0 as *mut T)
+    }
+}
 
 #[cfg(test)]
 mod tests {
