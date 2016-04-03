@@ -6,7 +6,7 @@
 //! ## Warning
 //!
 //! This is inherently unsafe if the `JoinGuard` is allowed to leak without being dropped.
-//! See #24292 for more details.
+//! See [rust-lang/rust#24292](https://github.com/rust-lang/rust/issues/24292) for more details.
 
 use std::marker::PhantomData;
 use std::thread::{spawn, JoinHandle, Thread};
