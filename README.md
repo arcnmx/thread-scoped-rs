@@ -17,7 +17,10 @@ See [rust-lang/rust#24292](https://github.com/rust-lang/rust/issues/24292) for m
 This crate is only provided as a fallback mirror for legacy dependency on the
 deprecated `libstd` interface. Using a modern and safe API instead is recommended:
 
-- [crossbeam::scope](https://github.com/crossbeam-rs/crossbeam)
+- [crossbeam::scope](https://github.com/crossbeam-rs/crossbeam) exposes a truly
+  safe interface for sharing the stack with a spawned thread.
+- [Rayon](https://github.com/nikomatsakis/rayon) is a high level data-parallelism
+  library.
 
 
 [travis-badge]: https://img.shields.io/travis/arcnmx/thread-scoped-rs/master.svg?style=flat-square
