@@ -6,7 +6,7 @@ A `std::thread::spawn()` that can access its current scope.
 Stable fork of the deprecated `std::thread::scoped()`
 
 
-## Unsafe Warning
+## Memory Unsafety
 
 This interface is inherently unsafe if the `JoinGuard` is allowed to leak without being dropped.
 See [rust-lang/rust#24292](https://github.com/rust-lang/rust/issues/24292) for more details.
@@ -15,7 +15,7 @@ See [rust-lang/rust#24292](https://github.com/rust-lang/rust/issues/24292) for m
 ## Alternatives
 
 This crate is only provided as a fallback mirror for legacy dependency on the
-deprecated `libstd` interface. Using a modern safe API instead is recommended:
+deprecated `libstd` interface. Using a modern and safe API instead is recommended:
 
 - [crossbeam::scope](https://github.com/crossbeam-rs/crossbeam)
 
