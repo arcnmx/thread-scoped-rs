@@ -1,5 +1,4 @@
 #![deny(missing_docs)]
-#![cfg_attr(feature = "unstable", feature(scoped))]
 
 //! A stable version of `std::thread::scoped`
 //!
@@ -55,15 +54,6 @@ pub trait ScopedDetach {
 impl<T: Send + 'static> ScopedDetach for JoinGuard<'static, T> {
     fn detach(mut self) {
         let _ = self.inner.take();
-    }
-}
-
-#[cfg(feature = "unstable")]
-impl<T: Send + 'static> ScopedDetach for ::std::thread::JoinGuard<'static, T> {
-    fn detach(self) {
-        use std::mem::forget;
-
-        forget(self);
     }
 }
 
