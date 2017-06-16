@@ -95,7 +95,8 @@ impl BoxedThing {
 
 #[cfg(test)]
 mod tests {
-    use std::thread::sleep_ms;
+    use std::thread::sleep;
+    use std::time::Duration;
     use super::scoped;
 
     #[test]
@@ -103,7 +104,7 @@ mod tests {
         unsafe {
             let mut a = 5;
             scoped(|| {
-                sleep_ms(50);
+                sleep(Duration::from_millis(100));
                 a = 2;
             }).join();
             assert_eq!(a, 2);
