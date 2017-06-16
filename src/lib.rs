@@ -1,5 +1,4 @@
 #![deny(missing_docs)]
-#![cfg_attr(feature = "unstable", feature(scoped))]
 
 //! A stable version of `std::thread::scoped`
 //!
@@ -58,15 +57,6 @@ impl<T: Send + 'static> ScopedDetach for JoinGuard<'static, T> {
     }
 }
 
-#[cfg(feature = "unstable")]
-impl<T: Send + 'static> ScopedDetach for ::std::thread::JoinGuard<'static, T> {
-    fn detach(self) {
-        use std::mem::forget;
-
-        forget(self);
-    }
-}
-
 impl<'a, T: Send + 'a> Drop for JoinGuard<'a, T> {
     fn drop(&mut self) {
         self.inner.take().map(|v| if v.join().is_err() {
@@ -105,7 +95,8 @@ impl BoxedThing {
 
 #[cfg(test)]
 mod tests {
-    use std::thread::sleep_ms;
+    use std::thread::sleep;
+    use std::time::Duration;
     use super::scoped;
 
     #[test]
@@ -113,7 +104,7 @@ mod tests {
         unsafe {
             let mut a = 5;
             scoped(|| {
-                sleep_ms(50);
+                sleep(Duration::from_millis(100));
                 a = 2;
             }).join();
             assert_eq!(a, 2);

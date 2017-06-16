@@ -9,6 +9,3 @@ repository = "https://github.com/arcnmx/thread-scoped-rs"
 readme = "README.md"
 keywords = ["thread", "scoped", "spawn", "stable"]
 license = "MIT/Apache-2.0"
-
-[features]
-unstable = []
